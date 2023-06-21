@@ -19,10 +19,12 @@ func main() {
 	}
 	defer logger.Sync()
 
-	th := handlers.NewTest(logger)
+	testHandler := handlers.NewTest(logger)
+	fileUploadHandler := handlers.NewFileUpload(logger)
 
 	sm := http.NewServeMux()
-	sm.Handle("/test", middlewares.AuthMiddleware(logger, th))
+	sm.Handle("/test", middlewares.AuthMiddleware(logger, testHandler))
+	sm.Handle("/upload", middlewares.AuthMiddleware(logger, fileUploadHandler))
 
 	server := http.Server{
 		Handler: sm,
