@@ -6,9 +6,10 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"strings"
 
+	"github.com/Hitesh-Nagothu/vault-service/data"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -16,32 +17,30 @@ type FileUpload struct {
 	logger *zap.Logger
 }
 
-const (
-	MaxFileSize = 10 * 1024 * 1024 // Maximum file size: 10 MB
-	ChunkSize   = 4 * 1024 * 1024  // Chunk size: 4 MB
-)
-
 func NewFileUpload(l *zap.Logger) *FileUpload {
 	return &FileUpload{l}
 }
+
+type ChunkedWriter struct {
+	file io.Writer
+}
+
+func NewChunkedWriter(file io.Writer) *ChunkedWriter {
+	return &ChunkedWriter{
+		file: file,
+	}
+}
+
+const (
+	MaxFileSize = 5 * 1024 * 1024 // Maximum file size: 5 MB
+	ChunkSize   = 1 * 1024 * 1024 // Chunk size: 1 MB
+)
 
 func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	/*
-		Pull the user email
-		Find if the user email exists in store
-		if user does not exist create a user
-
-		get the user uuid
-		create a file uuid for the file and store the key  in map
-		the values is an object of file metadata key and array of chunk uuids
-		create a chunk map where property value is ipfs hash
-
-	*/
 
 	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
@@ -57,21 +56,20 @@ func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create a new file on the server to store the uploaded file
-	uploadedFile, err := os.Create(fileHeader.Filename)
-	if err != nil {
-		http.Error(w, "Failed to create file on the server", http.StatusInternalServerError)
-		return
-	}
-	defer uploadedFile.Close()
+	fileStoreInstace := data.GetFileStore()
 
-	// Chunk and write the file data to the server
-	chunkedWriter := NewChunkedWriter(uploadedFile, ChunkSize)
-	_, err = io.Copy(chunkedWriter, file)
-	if err != nil {
-		http.Error(w, "Failed to upload file", http.StatusInternalServerError)
-		return
+	fileUuid := uuid.New()
+	fileName := fileHeader.Filename
+	fileChunks := []uuid.UUID{}
+
+	fileMetadataObj := data.FileMetadata{
+		Name:     fileName,
+		Chunks:   fileChunks,
+		MimeType: fileType,
 	}
+
+	fileStoreInstace = data.GetFileStore()
+	fileStoreInstace.Data[fileUuid] = fileMetadataObj
 
 	fmt.Fprintln(w, "File uploaded successfully")
 }
@@ -94,34 +92,18 @@ func isAllowedFileType(fileType string) bool {
 	}
 }
 
-type ChunkedWriter struct {
-	file    io.Writer
-	remains int64
-}
+func SplitIntoChunks(data []byte) [][]byte {
+	numChunks := (len(data) + ChunkSize - 1) / ChunkSize
+	chunks := make([][]byte, numChunks)
 
-func NewChunkedWriter(file io.Writer, chunkSize int64) *ChunkedWriter {
-	return &ChunkedWriter{
-		file:    file,
-		remains: chunkSize,
-	}
-}
-
-func (w *ChunkedWriter) Write(data []byte) (int, error) {
-	length := int64(len(data))
-	if length > w.remains {
-		data = data[:w.remains]
-		length = w.remains
+	for i := 0; i < numChunks; i++ {
+		start := i * ChunkSize
+		end := start + ChunkSize
+		if end > len(data) {
+			end = len(data)
+		}
+		chunks[i] = data[start:end]
 	}
 
-	written, err := w.file.Write(data)
-	if err != nil {
-		return written, err
-	}
-
-	w.remains -= length
-	if w.remains <= 0 {
-		return written, io.EOF
-	}
-
-	return written, nil
+	return chunks
 }
