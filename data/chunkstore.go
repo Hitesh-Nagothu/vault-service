@@ -8,14 +8,14 @@ type ChunkStore struct {
 	Data map[uuid.UUID]string
 }
 
-var storeInstance *ChunkStore
+var chunkStoreInstance *ChunkStore
 
 func GetChunkStore() *ChunkStore {
-	if storeInstance == nil {
-		storeInstance = &ChunkStore{
+	if chunkStoreInstance == nil {
+		chunkStoreInstance = &ChunkStore{
 			Data: make(map[uuid.UUID]string),
 		}
 	}
 
-	return storeInstance
+	return chunkStoreInstance
 }

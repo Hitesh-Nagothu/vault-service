@@ -56,7 +56,13 @@ func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileStoreInstace := data.GetFileStore()
+	userEmailFromContext, _ := r.Context().Value("email").(string)
+	if len(userEmailFromContext) == 0 {
+		http.Error(w, "No user email found. Cannot process the file", http.StatusBadRequest)
+		return
+	}
+
+	//TODO create uuid for each chunk of the file and retrieve IPFS hash and store in map. Store the chunk ids in the file map
 
 	fileUuid := uuid.New()
 	fileName := fileHeader.Filename
@@ -68,8 +74,14 @@ func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		MimeType: fileType,
 	}
 
-	fileStoreInstace = data.GetFileStore()
-	fileStoreInstace.Data[fileUuid] = fileMetadataObj
+	fileStoreInstance := data.GetFileStore()
+	userStoreInstance := data.GetUserStore()
+
+	fileStoreInstance.Data[fileUuid] = fileMetadataObj
+	userMetadata := userStoreInstance.Data[userEmailFromContext]
+
+	userMetadata.Files = append(userStoreInstance.Data[userEmailFromContext].Files, fileUuid)
+	userStoreInstance.Data[userEmailFromContext] = userMetadata
 
 	fmt.Fprintln(w, "File uploaded successfully")
 }

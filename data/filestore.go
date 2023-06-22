@@ -14,13 +14,13 @@ type FileStore struct {
 	Data map[uuid.UUID]FileMetadata
 }
 
-var storeinstance *FileStore
+var fileStoreInstance *FileStore
 
 func GetFileStore() *FileStore {
-	if storeinstance == nil {
-		storeinstance = &FileStore{
+	if fileStoreInstance == nil {
+		fileStoreInstance = &FileStore{
 			Data: make(map[uuid.UUID]FileMetadata),
 		}
 	}
-	return storeinstance
+	return fileStoreInstance
 }
