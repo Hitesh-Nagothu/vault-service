@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -50,8 +53,15 @@ func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// Check if the file is an allowed type
-	fileType := getFileType(fileHeader)
-	if !isAllowedFileType(fileType) {
+	fileTypes := getFileType(fileHeader)
+
+	if len(fileTypes) == 0 {
+		http.Error(w, "Failed to infer the type of file upload.", http.StatusBadRequest)
+		return
+	}
+
+	fileType, isAllowed := isAllowedFileType(fileTypes)
+	if !isAllowed {
 		http.Error(w, "Invalid file type", http.StatusBadRequest)
 		return
 	}
@@ -62,11 +72,35 @@ func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO create uuid for each chunk of the file and retrieve IPFS hash and store in map. Store the chunk ids in the file map
+	filebytes, readErr := io.ReadAll(file)
+	if readErr != nil {
+		http.Error(w, "Failed to read file", http.StatusNotAcceptable)
+		return
+	}
+
+	chunksOfFiles := SplitIntoChunks(filebytes)
+
+	chunkIdToChunkData := make(map[uuid.UUID][]byte)
+	for _, chunk := range chunksOfFiles {
+		newChunkId := uuid.New()
+		chunkIdToChunkData[newChunkId] = chunk
+	}
+
+	chunkIdToHash, ipfsErr := GetIPFSHashForChunks(chunkIdToChunkData)
+	if ipfsErr != nil {
+		http.Error(w, "Failed to generate hashes for file data", http.StatusExpectationFailed)
+		return
+	}
+
+	chunkIdsForFile := make([]uuid.UUID, 0)
+
+	for chunkId, _ := range chunkIdToHash {
+		chunkIdsForFile = append(chunkIdsForFile, chunkId)
+	}
 
 	fileUuid := uuid.New()
 	fileName := fileHeader.Filename
-	fileChunks := []uuid.UUID{}
+	fileChunks := chunkIdsForFile
 
 	fileMetadataObj := data.FileMetadata{
 		Name:     fileName,
@@ -86,22 +120,32 @@ func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "File uploaded successfully")
 }
 
-func getFileType(fileHeader *multipart.FileHeader) string {
+func getFileType(fileHeader *multipart.FileHeader) []string {
 	contentType := fileHeader.Header.Get("Content-Type")
 	extension, _ := mime.ExtensionsByType(contentType)
+	extensionsWithoutPrefix := make([]string, len(extension))
+
 	if len(extension) > 0 {
-		return strings.TrimPrefix(extension[0], ".")
+		for _, ext := range extension {
+			extensionsWithoutPrefix = append(extensionsWithoutPrefix, strings.TrimPrefix(ext, "."))
+		}
+		return extensionsWithoutPrefix
 	}
-	return ""
+	return make([]string, 0)
 }
 
-func isAllowedFileType(fileType string) bool {
-	switch fileType {
-	case "jpg", "jpeg", "png", "gif", "pdf", "txt", "doc", "docx":
-		return true
-	default:
-		return false
+func isAllowedFileType(fileTypes []string) (string, bool) {
+
+	for _, fileType := range fileTypes {
+		switch fileType {
+		case "jpg", "jpeg", "png", "gif", "pdf", "txt", "doc", "docx":
+			return fileType, true
+		default:
+			//DO nothing
+		}
 	}
+
+	return "", false
 }
 
 func SplitIntoChunks(data []byte) [][]byte {
@@ -118,4 +162,24 @@ func SplitIntoChunks(data []byte) [][]byte {
 	}
 
 	return chunks
+}
+
+func GetIPFSHashForChunks(chunkData map[uuid.UUID][]byte) (map[uuid.UUID]string, error) {
+
+	chunkIdToHash := make(map[uuid.UUID]string)
+
+	for chunkId, chunkBytes := range chunkData {
+
+		_, err := rand.Read(chunkBytes)
+		if err != nil {
+			fmt.Println("Failed to generate random bytes:", err)
+			return nil, errors.New("failed to generate random bytes")
+		}
+
+		// Convert the random bytes to a hex-encoded string
+		hash := hex.EncodeToString(chunkBytes)
+		chunkIdToHash[chunkId] = hash
+	}
+
+	return chunkIdToHash, nil
 }
