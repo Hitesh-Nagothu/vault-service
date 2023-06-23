@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Hitesh-Nagothu/vault-service/data"
+	"github.com/Hitesh-Nagothu/vault-service/ipfs"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -36,7 +36,7 @@ func NewChunkedWriter(file io.Writer) *ChunkedWriter {
 
 const (
 	MaxFileSize = 5 * 1024 * 1024 // Maximum file size: 5 MB
-	ChunkSize   = 1 * 1024 * 1024 // Chunk size: 1 MB
+	ChunkSize   = 5 * 1024 * 1024 // Chunk size: 1 MB
 )
 
 func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +94,9 @@ func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	chunkIdsForFile := make([]uuid.UUID, 0)
 
-	for chunkId, _ := range chunkIdToHash {
+	chunkStore := data.GetChunkStore()
+	for chunkId, chunkHash := range chunkIdToHash {
+		chunkStore.Data[chunkId] = chunkHash
 		chunkIdsForFile = append(chunkIdsForFile, chunkId)
 	}
 
@@ -166,8 +168,9 @@ func SplitIntoChunks(data []byte) [][]byte {
 
 func GetIPFSHashForChunks(chunkData map[uuid.UUID][]byte) (map[uuid.UUID]string, error) {
 
-	chunkIdToHash := make(map[uuid.UUID]string)
+	ipfsInstance := ipfs.GetIPFSInstance()
 
+	chunkIdToHash := make(map[uuid.UUID]string)
 	for chunkId, chunkBytes := range chunkData {
 
 		_, err := rand.Read(chunkBytes)
@@ -176,9 +179,14 @@ func GetIPFSHashForChunks(chunkData map[uuid.UUID][]byte) (map[uuid.UUID]string,
 			return nil, errors.New("failed to generate random bytes")
 		}
 
-		// Convert the random bytes to a hex-encoded string
-		hash := hex.EncodeToString(chunkBytes)
+		hash, err := ipfsInstance.AddContent(chunkBytes)
+		if err != nil {
+			//TODO handle partial upload errors
+			fmt.Println("Failed to add a chunk to ipfs %w", err)
+			return nil, err
+		}
 		chunkIdToHash[chunkId] = hash
+		fmt.Println(hash)
 	}
 
 	return chunkIdToHash, nil
