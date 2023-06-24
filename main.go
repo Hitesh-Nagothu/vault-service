@@ -24,9 +24,9 @@ func main() {
 	fileRetrieveHandler := handlers.NewFileRetrieve(logger)
 
 	sm := http.NewServeMux()
-	sm.Handle("/test", middlewares.AuthMiddleware(logger, testHandler))
-	sm.Handle("/upload", middlewares.AuthMiddleware(logger, fileUploadHandler))
-	sm.Handle("/files", middlewares.AuthMiddleware(logger, fileRetrieveHandler))
+	sm.Handle("/file/test", middlewares.AuthMiddleware(logger, testHandler))
+	sm.Handle("/file", middlewares.AuthMiddleware(logger, fileUploadHandler))
+	sm.Handle("/file/all", middlewares.AuthMiddleware(logger, fileRetrieveHandler))
 
 	server := http.Server{
 		Handler: sm,
