@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -78,44 +76,30 @@ func (fh *FileUpload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chunksOfFiles := SplitIntoChunks(filebytes)
-
-	chunkIdToChunkData := make(map[uuid.UUID][]byte)
-	for _, chunk := range chunksOfFiles {
-		newChunkId := uuid.New()
-		chunkIdToChunkData[newChunkId] = chunk
-	}
-
-	chunkIdToHash, ipfsErr := GetIPFSHashForChunks(chunkIdToChunkData)
+	fileHash, ipfsErr := GetIPFSHashForFile(filebytes)
 	if ipfsErr != nil {
 		http.Error(w, "Failed to generate hashes for file data", http.StatusExpectationFailed)
 		return
 	}
 
-	chunkIdsForFile := make([]uuid.UUID, 0)
-
 	chunkStore := data.GetChunkStore()
-	for chunkId, chunkHash := range chunkIdToHash {
-		chunkStore.Data[chunkId] = chunkHash
-		chunkIdsForFile = append(chunkIdsForFile, chunkId)
-	}
+	fileStoreInstance := data.GetFileStore()
+	userStoreInstance := data.GetUserStore()
+
+	fileChunkId := uuid.New()
+	chunkStore.Data[fileChunkId] = fileHash
 
 	fileUuid := uuid.New()
 	fileName := fileHeader.Filename
-	fileChunks := chunkIdsForFile
-
+	fileChunks := []uuid.UUID{fileChunkId}
 	fileMetadataObj := data.FileMetadata{
 		Name:     fileName,
 		Chunks:   fileChunks,
 		MimeType: fileType,
 	}
-
-	fileStoreInstance := data.GetFileStore()
-	userStoreInstance := data.GetUserStore()
-
 	fileStoreInstance.Data[fileUuid] = fileMetadataObj
-	userMetadata := userStoreInstance.Data[userEmailFromContext]
 
+	userMetadata := userStoreInstance.Data[userEmailFromContext]
 	userMetadata.Files = append(userStoreInstance.Data[userEmailFromContext].Files, fileUuid)
 	userStoreInstance.Data[userEmailFromContext] = userMetadata
 
@@ -150,44 +134,15 @@ func isAllowedFileType(fileTypes []string) (string, bool) {
 	return "", false
 }
 
-func SplitIntoChunks(data []byte) [][]byte {
-	numChunks := (len(data) + ChunkSize - 1) / ChunkSize
-	chunks := make([][]byte, numChunks)
-
-	for i := 0; i < numChunks; i++ {
-		start := i * ChunkSize
-		end := start + ChunkSize
-		if end > len(data) {
-			end = len(data)
-		}
-		chunks[i] = data[start:end]
-	}
-
-	return chunks
-}
-
-func GetIPFSHashForChunks(chunkData map[uuid.UUID][]byte) (map[uuid.UUID]string, error) {
+func GetIPFSHashForFile(fileData []byte) (string, error) {
 
 	ipfsInstance := ipfs.GetIPFSInstance()
-
-	chunkIdToHash := make(map[uuid.UUID]string)
-	for chunkId, chunkBytes := range chunkData {
-
-		_, err := rand.Read(chunkBytes)
-		if err != nil {
-			fmt.Println("Failed to generate random bytes:", err)
-			return nil, errors.New("failed to generate random bytes")
-		}
-
-		hash, err := ipfsInstance.AddContent(chunkBytes)
-		if err != nil {
-			//TODO handle partial upload errors
-			fmt.Println("Failed to add a chunk to ipfs %w", err)
-			return nil, err
-		}
-		chunkIdToHash[chunkId] = hash
-		fmt.Println(hash)
+	hash, err := ipfsInstance.AddContent(fileData)
+	if err != nil {
+		//TODO handle partial upload errors
+		fmt.Println("Failed to add a chunk to ipfs %w", err)
+		return "", err
 	}
 
-	return chunkIdToHash, nil
+	return hash, nil
 }

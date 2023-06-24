@@ -34,6 +34,7 @@ func (fr *FileRetrieve) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	userStore := data.GetUserStore()
 	fileStore := data.GetFileStore()
+	chunkStore := data.GetChunkStore()
 
 	userData, userExists := userStore.Data[userEmailFromContext]
 	if !userExists {
@@ -41,22 +42,29 @@ func (fr *FileRetrieve) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sampelFileId := userData.Files[0]
-	sampleChunkIds := fileStore.Data[sampelFileId].Chunks
+	var response = make(map[string]interface{})
+	for _, fileId := range userData.Files {
+		fileMetadata := fileStore.Data[fileId]
+		var chunkHashes []string
+		for _, chunkId := range fileMetadata.Chunks {
+			chunkHashes = append(chunkHashes, chunkStore.Data[chunkId])
+		}
 
-	dataChunks, ipfsReadErr := getContentForFile(sampleChunkIds)
-	if ipfsReadErr != nil {
-		return
+		response[fileMetadata.Name] = map[string]interface{}{
+			"mime": fileMetadata.MimeType,
+			"cids": chunkHashes,
+		}
 	}
 
-	// Encode the UUIDs into JSON
-	jsonData, err := json.Marshal(dataChunks)
+	jsonResponse, err := json.Marshal(response)
 	if err != nil {
-		http.Error(w, "Failed to encode UUIDs", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write(jsonData)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
 }
 
 func getContentForFile(chunkIds []uuid.UUID) ([][]byte, error) {
