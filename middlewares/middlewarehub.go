@@ -9,6 +9,7 @@ type MiddlewareHandler struct {
 	middlewares []func(http.Handler) http.Handler
 }
 
+// TODO: change to singleton
 func NewMiddlewareHandler() *MiddlewareHandler {
 	return &MiddlewareHandler{
 		mux: http.NewServeMux(),
@@ -21,12 +22,12 @@ func (mh *MiddlewareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (mh *MiddlewareHandler) Handle(pattern string, handler http.Handler) {
-	// Apply the middlewares to the handler
+	// Apply the middlewares to the handler (middlewares added in server init file main.go)
 	for _, middleware := range mh.middlewares {
 		handler = middleware(handler)
 	}
 
-	// Register the handler with the underlying ServeMux
+	// Register the handler with the embedded servermux
 	mh.mux.Handle(pattern, handler)
 }
 
