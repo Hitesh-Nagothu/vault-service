@@ -12,11 +12,10 @@ import (
 
 	"github.com/Hitesh-Nagothu/vault-service/data"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 )
 
 // AuthMiddleware is a middleware function to authenticate access tokens
-func AuthMiddleware(logger *zap.Logger, next http.Handler) http.Handler {
+func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		token := r.Header.Get("Authorization")
@@ -24,7 +23,6 @@ func AuthMiddleware(logger *zap.Logger, next http.Handler) http.Handler {
 
 		// Check if the token is in the expected format
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			logger.Warn("Unauthorized request", zap.String("path", r.URL.Path))
 			w.WriteHeader(http.StatusUnauthorized)
 			fmt.Fprint(w, "Unauthorized")
 			return

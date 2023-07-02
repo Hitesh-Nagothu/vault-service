@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -12,30 +11,26 @@ import (
 )
 
 func main() {
-	// Create a new Zap logger
+
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Sync()
+
+	handler := middlewares.NewMiddlewareHandler()
+	handler.Use(middlewares.AuthMiddleware)
 
 	fileUploadHandler := handlers.NewFileUpload(logger)
 	fileRetrieveHandler := handlers.NewFileRetrieve(logger)
 
-	sm := http.NewServeMux()
-	sm.Handle("/file", middlewares.AuthMiddleware(logger, fileUploadHandler))
-	sm.Handle("/file/all", middlewares.AuthMiddleware(logger, fileRetrieveHandler))
+	handler.Handle("/file", fileUploadHandler)
+	handler.Handle("/file/all", fileRetrieveHandler)
 
-	server := http.Server{
-		Handler: sm,
-		Addr:    ":8080",
+	serverErr := http.ListenAndServe(":8080", handler)
+	if serverErr != nil {
+		log.Fatal("Server error: ", err)
 	}
 
-	fmt.Println("Server starting on port 8080")
-	err = server.ListenAndServe()
-	if err != nil {
-		fmt.Println("Server error:", err)
-	}
 }
 
 func init() {
