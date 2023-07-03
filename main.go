@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Hitesh-Nagothu/vault-service/data"
 	"github.com/Hitesh-Nagothu/vault-service/handlers"
 	"github.com/Hitesh-Nagothu/vault-service/middlewares"
+	"github.com/Hitesh-Nagothu/vault-service/service"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
@@ -19,14 +21,20 @@ func main() {
 	}
 	defer logger.Sync()
 
-	testHandler := handlers.NewTest(logger)
-	fileUploadHandler := handlers.NewFileUpload(logger)
-	fileRetrieveHandler := handlers.NewFileRetrieve(logger)
+	//db setup
+	db := data.GetMongoDBInstance()
+	fileRepo := data.NewFileRepository(db)
+	userRepo := data.NewUserRepository(db)
+	chunkRepo := data.NewChunkRepository(db)
+
+	fileService := service.NewFileService(logger, fileRepo)
+	userService := service.NewUserService(logger, userRepo)
+	chunkService := service.NewChunkService(logger, chunkRepo)
+
+	fileUploadHandler := handlers.NewFileUpload(logger, fileService)
 
 	sm := http.NewServeMux()
-	sm.Handle("/file/test", middlewares.AuthMiddleware(logger, testHandler))
 	sm.Handle("/file", middlewares.AuthMiddleware(logger, fileUploadHandler))
-	sm.Handle("/file/all", middlewares.AuthMiddleware(logger, fileRetrieveHandler))
 
 	server := http.Server{
 		Handler: sm,

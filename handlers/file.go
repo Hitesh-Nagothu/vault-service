@@ -10,16 +10,21 @@ import (
 
 	"github.com/Hitesh-Nagothu/vault-service/data"
 	"github.com/Hitesh-Nagothu/vault-service/ipfs"
+	"github.com/Hitesh-Nagothu/vault-service/service"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type FileUpload struct {
-	logger *zap.Logger
+	logger  *zap.Logger
+	service *service.FileService
 }
 
-func NewFileUpload(l *zap.Logger) *FileUpload {
-	return &FileUpload{l}
+func NewFileUpload(l *zap.Logger, s *service.FileService) *FileUpload {
+	return &FileUpload{
+		logger:  l,
+		service: s,
+	}
 }
 
 type ChunkedWriter struct {
