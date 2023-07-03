@@ -6,26 +6,29 @@ import (
 	"io"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	"go.uber.org/zap"
 )
 
-type IPFS struct {
-	api *shell.Shell
+type IPFSService struct {
+	api    *shell.Shell
+	logger *zap.Logger
 }
 
-var ipfsInstance *IPFS
+var ipfsInstance *IPFSService
 
-func GetIPFSInstance() *IPFS {
+func NewIPFSService(logger *zap.Logger) *IPFSService {
 	if ipfsInstance == nil {
 		api := shell.NewShell("/ip4/127.0.0.1/tcp/5001")
-		ipfsInstance = &IPFS{
-			api: api,
+		ipfsInstance = &IPFSService{
+			api:    api,
+			logger: logger,
 		}
 	}
 	return ipfsInstance
 }
 
 // AddContent adds content to the IPFS network and returns the CID.
-func (ipfs *IPFS) AddContent(content []byte) (string, error) {
+func (ipfs *IPFSService) AddContent(content []byte) (string, error) {
 	cid, err := ipfs.api.Add(bytes.NewReader(content))
 	if err != nil {
 		return "", fmt.Errorf("failed to add content to IPFS: %w", err)
@@ -34,7 +37,7 @@ func (ipfs *IPFS) AddContent(content []byte) (string, error) {
 }
 
 // GetContent retrieves content from the IPFS network using the given CID.
-func (ipfs *IPFS) GetContent(cid string) ([]byte, error) {
+func (ipfs *IPFSService) GetContent(cid string) ([]byte, error) {
 	reader, err := ipfs.api.Cat(cid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve content from IPFS: %w", err)

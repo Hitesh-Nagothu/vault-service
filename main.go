@@ -20,20 +20,24 @@ func main() {
 
 	//db setup
 	db := data.GetMongoDBInstance()
+
+	ipfsService := service.NewIPFSService(logger)
+
+	//file
 	fileRepo := data.NewFileRepository(db, logger)
-	userRepo := data.NewUserRepository(db, logger)
-	chunkRepo := data.NewChunkRepository(db, logger)
-
 	fileService := service.NewFileService(logger, fileRepo)
-	userService := service.NewUserService(logger, userRepo)
-	chunkService := service.NewChunkService(logger, chunkRepo)
+	fileHandler := handlers.NewFile(logger, fileService, ipfsService)
 
-	fileUploadHandler := handlers.NewFileUpload(logger, fileService)
+	//user
+	userRepo := data.NewUserRepository(db, logger)
+	userService := service.NewUserService(logger, userRepo)
+	userHandler := handlers.NewUser(logger, userService)
 
 	handler := middlewares.NewMiddlewareHandler()
 	handler.Use(middlewares.AuthMiddleware)
+	handler.Handle("/file", fileHandler)
+	handler.Handle("/user", userHandler)
 
-	handler.Handle("/file", fileUploadHandler)
 	serverErr := http.ListenAndServe(":8080", handler)
 	if serverErr != nil {
 		log.Fatal("Server error: ", err)
