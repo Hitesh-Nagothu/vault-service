@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-	// Create a new Zap logger
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		log.Fatal(err)
@@ -23,9 +22,9 @@ func main() {
 
 	//db setup
 	db := data.GetMongoDBInstance()
-	fileRepo := data.NewFileRepository(db)
-	userRepo := data.NewUserRepository(db)
-	chunkRepo := data.NewChunkRepository(db)
+	fileRepo := data.NewFileRepository(db, logger)
+	userRepo := data.NewUserRepository(db, logger)
+	chunkRepo := data.NewChunkRepository(db, logger)
 
 	fileService := service.NewFileService(logger, fileRepo)
 	userService := service.NewUserService(logger, userRepo)
