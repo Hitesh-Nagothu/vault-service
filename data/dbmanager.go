@@ -50,5 +50,5 @@ func createMongoDBConnection() *MongoDB {
 }
 
 func (db *MongoDB) GetDatabase() *mongo.Database {
-	return db.connection.Database("xyz")
+	return db.connection.Database("vault")
 }

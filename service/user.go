@@ -1,9 +1,11 @@
 package service
 
 import (
+	"errors"
 	"time"
 
 	"github.com/Hitesh-Nagothu/vault-service/data"
+	"github.com/Hitesh-Nagothu/vault-service/utility"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -22,10 +24,16 @@ func NewUserService(logger *zap.Logger, repo *data.UserRepository) *UserService 
 
 func (service *UserService) CreateUser(email string) (data.User, error) {
 	//check if user with same email already exists
-	_, err := service.getUser(email)
+	existingUser, err := service.GetUser(email)
 	if err != nil {
 		service.logger.Error("Something went wrong creating the user", zap.Error(err))
 		return data.User{}, nil
+	}
+
+	isEmptyUserData := utility.IsStructEmpty(existingUser)
+	if !isEmptyUserData {
+		service.logger.Error("User with email already exists", zap.String("email", email))
+		return data.User{}, errors.New("User with email already exists")
 	}
 
 	newUser := data.User{
@@ -41,8 +49,8 @@ func (service *UserService) CreateUser(email string) (data.User, error) {
 	return createdUser, nil
 }
 
-func (service *UserService) getUser(email string) (data.User, error) {
-	//preprocess email
+func (service *UserService) GetUser(email string) (data.User, error) {
+
 	user, err := service.repo.Get(email)
 	if err != nil {
 		return data.User{}, err
