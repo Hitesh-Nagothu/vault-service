@@ -126,9 +126,9 @@ func (handler *User) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *User) updateUser(w http.ResponseWriter, r *http.Request) {
-
+	http.Error(w, "Method not implementeed", http.StatusNotImplemented)
 }
 
 func (handler *User) deletUser(w http.ResponseWriter, r *http.Request) {
-
+	http.Error(w, "Method not implementeed", http.StatusNotImplemented)
 }
