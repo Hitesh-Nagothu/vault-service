@@ -51,6 +51,9 @@ func (handler *User) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//create the user
+	handler.userService.CreateUser(userEmailFromContext)
+
 }
 
 func (handler *User) getUser(w http.ResponseWriter, r *http.Request) {
