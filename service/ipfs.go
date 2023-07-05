@@ -18,12 +18,16 @@ var ipfsInstance *IPFSService
 
 func NewIPFSService(logger *zap.Logger) *IPFSService {
 	if ipfsInstance == nil {
-		api := shell.NewShell("/ip4/127.0.0.1/tcp/5001")
+		api := shell.NewShell("/ip4/127.0.0.1/tcp/5001") //TODO Use config
 		ipfsInstance = &IPFSService{
 			api:    api,
 			logger: logger,
 		}
 	}
+	return ipfsInstance
+}
+
+func (ipfs *IPFSService) GetIPFSInstance() *IPFSService {
 	return ipfsInstance
 }
 

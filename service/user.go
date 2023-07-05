@@ -6,7 +6,7 @@ import (
 
 	"github.com/Hitesh-Nagothu/vault-service/data"
 	"github.com/Hitesh-Nagothu/vault-service/utility"
-	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 )
 
@@ -33,13 +33,13 @@ func (service *UserService) CreateUser(email string) (data.User, error) {
 	isEmptyUserData := utility.IsStructEmpty(existingUser)
 	if !isEmptyUserData {
 		service.logger.Error("User with email already exists", zap.String("email", email))
-		return data.User{}, errors.New("User with email already exists")
+		return data.User{}, errors.New("user with email already exists")
 	}
 
 	newUser := data.User{
 		Email:          email,
 		LastAccessedOn: time.Now(),
-		Files:          []uuid.UUID{},
+		Files:          []primitive.ObjectID{},
 	}
 	createdUser, createErr := service.repo.Add(&newUser)
 	if createErr != nil {

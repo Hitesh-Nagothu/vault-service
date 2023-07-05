@@ -67,15 +67,19 @@ func main() {
 	//ipfs
 	ipfsService := service.NewIPFSService(logger)
 
-	//file
-	fileRepo := data.NewFileRepository(db, logger)
-	fileService := service.NewFileService(logger, fileRepo)
-	fileHandler := handlers.NewFile(logger, fileService, ipfsService)
+	//chunk
+	chunkRepo := data.NewChunkRepository(db, logger)
+	chunkService := service.NewChunkService(logger, chunkRepo)
 
 	//user
 	userRepo := data.NewUserRepository(db, logger)
 	userService := service.NewUserService(logger, userRepo)
 	userHandler := handlers.NewUser(logger, userService)
+
+	//file
+	fileRepo := data.NewFileRepository(db, logger)
+	fileService := service.NewFileService(logger, fileRepo, ipfsService, chunkService, userService)
+	fileHandler := handlers.NewFile(logger, fileService)
 
 	handler := middlewares.NewMiddlewareHandler()
 	handler.Use(middlewares.AuthMiddleware)

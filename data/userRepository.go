@@ -4,16 +4,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 )
 
 type User struct {
-	Email          string      `bson:"email"`
-	LastAccessedOn time.Time   `bson:"last_accessed_on"`
-	Files          []uuid.UUID `bson:"files"`
+	Email          string               `bson:"email"`
+	LastAccessedOn time.Time            `bson:"last_accessed_on"`
+	Files          []primitive.ObjectID `bson:"files"`
 }
 
 type UserRepository struct {
