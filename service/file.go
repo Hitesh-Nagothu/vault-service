@@ -31,7 +31,15 @@ func NewFileService(logger *zap.Logger, repo *data.FileRepository, ipfsService *
 	}
 }
 
+const (
+	MaxFileSize = 5 * 1024 * 1024 // 5MB in bytes
+)
+
 func (fs *FileService) CreateFile(file multipart.File, fileHeader *multipart.FileHeader, userEmail string) error {
+
+	if fileHeader.Size > MaxFileSize {
+		return errors.New("file size uploaded exceeds the permissible limit of 5MB")
+	}
 
 	fileTypes := fs.GetFileType(fileHeader)
 
@@ -57,6 +65,8 @@ func (fs *FileService) CreateFile(file multipart.File, fileHeader *multipart.Fil
 		fs.logger.Error("Failed to generate hash for file", zap.String("fileName", fileHeader.Filename), zap.String("fileType", fileType))
 		return errors.New("something went wrong processing the file")
 	}
+
+	//Note: Following only a single chunk for a file, will likely add the chunk implementation later if needed
 
 	//insert the new chunk
 	createdChunk, createChunkErr := fs.chunkService.CreateChunk(fileHash)
