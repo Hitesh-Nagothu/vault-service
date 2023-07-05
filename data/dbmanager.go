@@ -22,15 +22,15 @@ type MongoDB struct {
 	connection *mongo.Client
 }
 
-func GetMongoDBInstance() *MongoDB {
+func GetMongoDBInstance(addr string) *MongoDB {
 	mongoDBOnce.Do(func() {
-		mongoDBInstance = createMongoDBConnection()
+		mongoDBInstance = createMongoDBConnection(addr)
 	})
 	return mongoDBInstance
 }
 
-func createMongoDBConnection() *MongoDB {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+func createMongoDBConnection(addr string) *MongoDB {
+	clientOptions := options.Client().ApplyURI(addr)
 
 	ctx := context.TODO()
 	client, err := mongo.Connect(ctx, clientOptions)

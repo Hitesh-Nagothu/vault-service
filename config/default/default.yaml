@@ -1,0 +1,7 @@
+database:
+  url: mongodb://localhost:27017
+  name: vault
+
+server:
+  port: 8080
+  
