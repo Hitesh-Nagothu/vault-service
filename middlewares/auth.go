@@ -67,11 +67,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Create a new context with the email value
+		//TODO Update user last accessed on every request. Figure out if can be done async without blocking request flow
+
 		ctx := context.WithValue(r.Context(), "email", email)
 		r = r.WithContext(ctx)
-
-		// Call the next handler in the chain
 		next.ServeHTTP(w, r)
 	})
 }
