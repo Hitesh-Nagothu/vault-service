@@ -2,6 +2,8 @@ package utility
 
 import (
 	"reflect"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func IsStructEmpty(data interface{}) bool {
@@ -20,4 +22,20 @@ func IsStructEmpty(data interface{}) bool {
 	}
 
 	return true
+}
+
+func IntersectionOfIds(existing []primitive.ObjectID, new []primitive.ObjectID) []primitive.ObjectID {
+	lookup := make(map[primitive.ObjectID]bool)
+	for _, id := range existing {
+		lookup[id] = true
+	}
+
+	intersection := []primitive.ObjectID{}
+	for _, id := range new {
+		if lookup[id] {
+			intersection = append(intersection, id)
+		}
+	}
+
+	return intersection
 }

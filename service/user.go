@@ -58,3 +58,8 @@ func (service *UserService) GetUser(email string) (data.User, error) {
 
 	return user, nil
 }
+
+func (service *UserService) UpdateUser(userId primitive.ObjectID, userUpdateBody data.User) error {
+	err := service.repo.Update(userId, userUpdateBody)
+	return err
+}

@@ -67,7 +67,7 @@ func (handler *File) uploadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to upload file "+uploadFileErr.Error(), http.StatusBadRequest)
 	}
 
-	fmt.Fprint(w, "File upload successful")
+	fmt.Fprint(w, "File upload complete")
 }
 
 func (handler *File) getFile(w http.ResponseWriter, r *http.Request) {

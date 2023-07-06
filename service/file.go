@@ -84,7 +84,7 @@ func (fs *FileService) CreateFile(file multipart.File, fileHeader *multipart.Fil
 	}
 
 	//insert the new file
-	_, createFileErr := fs.repo.Add(newFile)
+	createdFile, createFileErr := fs.repo.Add(newFile)
 	if createFileErr != nil {
 		fs.logger.Error("Failed to create new file. Aborting file upload")
 		return errors.New("something went wrong processing the file")
@@ -97,9 +97,18 @@ func (fs *FileService) CreateFile(file multipart.File, fileHeader *multipart.Fil
 		return errors.New("something went wrong processing the file")
 	}
 
-	//TODO
-	//update the existing user with new file
+	userUpdate := data.User{
+		Files: []primitive.ObjectID{createdFile.ID}, //sending partial object
+	}
+	updateUserErr := fs.userService.UpdateUser(user.ID, userUpdate)
+	if updateUserErr != nil {
+		fs.logger.Error("Failed to udpate the user owner with new file. Aborting file upload")
+		return errors.New("something went wrong processing the file")
+	}
 
+	//TODO make chunk storing, file creation and update user with new file transactional
+
+	fs.logger.Info("File upload succesful", zap.String("file_name", createdFile.Name))
 	return nil
 }
 
