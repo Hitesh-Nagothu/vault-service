@@ -1,0 +1,7 @@
+database:
+  url: null
+  name: vault
+
+server:
+  port: 8080
+  
