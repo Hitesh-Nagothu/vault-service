@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 	"io"
-	"mime"
 	"mime/multipart"
 	"strings"
 
@@ -41,16 +40,10 @@ func (fs *FileService) CreateFile(file multipart.File, fileHeader *multipart.Fil
 		return errors.New("file size uploaded exceeds the permissible limit of 5MB")
 	}
 
-	fileTypes := fs.GetFileType(fileHeader)
-
-	if len(fileTypes) == 0 {
-		fs.logger.Error("Failed to infer the type of file uploaded")
-		return errors.New("failed to infer the type of file uploaded")
-	}
-
-	fileType, isAllowed := fs.IsAllowedFileType(fileTypes)
+	fileType := fs.GetFileType(fileHeader.Filename)
+	fileType, isAllowed := fs.IsAllowedFileType(fileType)
 	if !isAllowed {
-		fs.logger.Error("Invalid file type", zap.String("requested_file_type", fileType), zap.Strings("allowed_types", fileTypes))
+		fs.logger.Error("Invalid file type", zap.String("requested_file_type", fileType))
 		return errors.New("unsupported file type uploaded")
 	}
 
@@ -92,14 +85,16 @@ func (fs *FileService) CreateFile(file multipart.File, fileHeader *multipart.Fil
 
 	//get ther user uploading the file
 	user, err := fs.userService.GetUser(userEmail)
+	//TODO check for notfound error else abort
 	if err != nil || utility.IsStructEmpty(user) {
-		fs.logger.Error("Failed to find the user owner for file. Aborting file upload")
-		return errors.New("something went wrong processing the file")
+		user, err = fs.userService.CreateUser(userEmail)
+		fs.logger.Info("Create a new user previously not found", zap.String("user_email", user.Email))
 	}
 
 	userUpdate := data.User{
 		Files: []primitive.ObjectID{createdFile.ID}, //sending partial object
 	}
+
 	updateUserErr := fs.userService.UpdateUser(user.ID, userUpdate)
 	if updateUserErr != nil {
 		fs.logger.Error("Failed to udpate the user owner with new file. Aborting file upload")
@@ -107,37 +102,23 @@ func (fs *FileService) CreateFile(file multipart.File, fileHeader *multipart.Fil
 	}
 
 	//TODO make chunk storing, file creation and update user with new file transactional
-
-	fs.logger.Info("File upload succesful", zap.String("file_name", createdFile.Name))
+	fs.logger.Info("File upload successful", zap.String("file_name", createdFile.Name))
 	return nil
 }
 
-func (fs *FileService) GetFileType(fileHeader *multipart.FileHeader) []string {
-	contentType := fileHeader.Header.Get("Content-Type")
-	extension, _ := mime.ExtensionsByType(contentType)
-	extensionsWithoutPrefix := make([]string, len(extension))
-
-	if len(extension) > 0 {
-		for _, ext := range extension {
-			extensionsWithoutPrefix = append(extensionsWithoutPrefix, strings.TrimPrefix(ext, "."))
-		}
-		return extensionsWithoutPrefix
-	}
-	return make([]string, 0)
+func (fs *FileService) GetFileType(filename string) string {
+	return strings.Split(filename, ".")[1]
 }
 
-func (fs *FileService) IsAllowedFileType(fileTypes []string) (string, bool) {
+func (fs *FileService) IsAllowedFileType(fileType string) (string, bool) {
 
-	for _, fileType := range fileTypes {
-		switch fileType {
-		case "jpg", "jpeg", "png", "gif", "pdf", "txt", "doc", "docx":
-			return fileType, true
-		default:
-			return "", false
-		}
+	switch fileType {
+	case "jpg", "jpeg", "png", "gif", "pdf", "txt", "doc", "docx":
+		return fileType, true
+	default:
+		return "", false
 	}
 
-	return "", false
 }
 
 func (fs *FileService) GetIPFSHashForFile(fileData []byte) (string, error) {
@@ -147,6 +128,5 @@ func (fs *FileService) GetIPFSHashForFile(fileData []byte) (string, error) {
 	if err != nil {
 		//TODO
 	}
-
 	return hash, nil
 }
