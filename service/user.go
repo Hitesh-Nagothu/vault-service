@@ -60,6 +60,5 @@ func (service *UserService) GetUser(email string) (data.User, error) {
 }
 
 func (service *UserService) UpdateUser(userId primitive.ObjectID, userUpdateBody data.User) error {
-	err := service.repo.Update(userId, userUpdateBody)
-	return err
+	return service.repo.Update(userId, userUpdateBody)
 }

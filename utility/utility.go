@@ -39,3 +39,21 @@ func IntersectionOfIds(existing []primitive.ObjectID, new []primitive.ObjectID) 
 
 	return intersection
 }
+
+func UnionOfIds(existing []primitive.ObjectID, new []primitive.ObjectID) []primitive.ObjectID {
+	lookup := make(map[primitive.ObjectID]bool)
+	for _, id := range existing {
+		lookup[id] = true
+	}
+
+	for _, id := range new {
+		lookup[id] = true
+	}
+
+	union := []primitive.ObjectID{}
+	for key := range lookup {
+		union = append(union, key)
+	}
+
+	return union
+}

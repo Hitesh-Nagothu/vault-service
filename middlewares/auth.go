@@ -56,13 +56,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		email, ok := googleResponseData["email"].(string)
-		if ok {
-			userCreateErr := createUserIfNotExists(email)
-			if userCreateErr != nil {
-				fmt.Fprintf(w, "Something went wrong")
-				return
-			}
-		} else {
+		if !ok {
 			fmt.Fprintf(w, "Something went wrong. Email not found")
 			return
 		}
@@ -73,10 +67,4 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
-}
-
-func createUserIfNotExists(userEmail string) error {
-
-	//stub out to user service
-	return nil
 }

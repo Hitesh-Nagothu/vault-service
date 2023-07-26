@@ -79,25 +79,20 @@ func (repo *UserRepository) Update(userDocumentId primitive.ObjectID, updateObje
 		return errors.New("user with given document id does not exist")
 	}
 
-	if updateObject.Email != user.Email {
-		repo.logger.Error("Cannot update email for user", zap.String("existing_email", user.Email), zap.String("new_email", updateObject.Email))
-		return errors.New("not allowed to update an email for an existing user")
-	}
-
 	newLastAccessedOnTime := time.Now()
-	newUserFiles := utility.IntersectionOfIds(user.Files, updateObject.Files) //not overwriting but merging the file ids
+	newUserFiles := utility.UnionOfIds(user.Files, updateObject.Files) //not overwriting but merging the file ids
 
-	updatedUser := User{
-		ID:             user.ID,
-		Email:          user.Email,
-		LastAccessedOn: newLastAccessedOnTime,
-		Files:          newUserFiles,
+	updatedUser := bson.M{
+		"$set": bson.M{
+			"LastAccessedOn": newLastAccessedOnTime,
+			"Files":          newUserFiles,
+		},
 	}
 
-	// Perform the update operation
 	_, updateErr := repo.collection.UpdateOne(context.Background(), filter, updatedUser)
+
 	if updateErr != nil {
-		repo.logger.Error("Failed to update user with new info", zap.Any("attempted_update", updatedUser))
+		repo.logger.Error("Failed to update user with new info", zap.Error(updateErr), zap.Any("attempted_update", updatedUser))
 		return errors.New("failed to udpate user")
 	}
 

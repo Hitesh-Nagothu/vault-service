@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -22,9 +23,9 @@ type MongoDB struct {
 	connection *mongo.Client
 }
 
-func GetMongoDBInstance(addr string) *MongoDB {
+func GetMongoDBInstance() *MongoDB {
 	mongoDBOnce.Do(func() {
-		mongoDBInstance = createMongoDBConnection(addr)
+		mongoDBInstance = createMongoDBConnection(viper.GetString("database.url"))
 	})
 	return mongoDBInstance
 }
@@ -50,5 +51,5 @@ func createMongoDBConnection(addr string) *MongoDB {
 }
 
 func (db *MongoDB) GetDatabase() *mongo.Database {
-	return db.connection.Database("vault")
+	return db.connection.Database(viper.GetString("database.name"))
 }

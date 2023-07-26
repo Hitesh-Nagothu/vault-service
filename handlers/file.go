@@ -65,6 +65,7 @@ func (handler *File) uploadFile(w http.ResponseWriter, r *http.Request) {
 	uploadFileErr := handler.fileService.CreateFile(file, fileHeader, userEmailFromContext)
 	if uploadFileErr != nil {
 		http.Error(w, "Failed to upload file "+uploadFileErr.Error(), http.StatusBadRequest)
+		return
 	}
 
 	fmt.Fprint(w, "File upload complete")

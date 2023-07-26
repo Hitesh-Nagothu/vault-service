@@ -5,3 +5,6 @@ database:
 server:
   port: 8080
   
+ipfs:
+  url: /ip4/127.0.0.1/tcp/
+  port: 5001
