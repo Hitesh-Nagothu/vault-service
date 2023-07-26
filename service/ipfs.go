@@ -6,6 +6,7 @@ import (
 	"io"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -17,8 +18,10 @@ type IPFSService struct {
 var ipfsInstance *IPFSService
 
 func NewIPFSService(logger *zap.Logger) *IPFSService {
+	ipfsURL := viper.GetString("ipfs.url")
+	ipfsPort := viper.GetString("ipfs.port")
 	if ipfsInstance == nil {
-		api := shell.NewShell("/ip4/127.0.0.1/tcp/5001") //TODO Use config
+		api := shell.NewShell(ipfsURL + ipfsPort)
 		ipfsInstance = &IPFSService{
 			api:    api,
 			logger: logger,
@@ -52,6 +55,6 @@ func (ipfs *IPFSService) GetContent(cid string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read content from IPFS: %w", err)
 	}
-	fmt.Println(content)
+	// fmt.Println(content)
 	return content, nil
 }

@@ -62,7 +62,7 @@ func main() {
 	defer logger.Sync()
 
 	//db setup
-	db := data.GetMongoDBInstance(config.Database.URL)
+	db := data.GetMongoDBInstance()
 
 	//ipfs
 	ipfsService := service.NewIPFSService(logger)
